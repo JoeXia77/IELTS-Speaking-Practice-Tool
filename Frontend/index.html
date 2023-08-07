@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>雅思口语练习 ~ IELTS speaking practice and evaluation</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header style="text-align: center;">
+      <h1>雅思口语练习 ~ IELTS speaking practice and evaluation</h1>
+    </header>
+    <main>
+      <!-- 1. Block related to question -->
+      <div class="block question-block">
+        <div id="question" style="font-size: 2em; margin-bottom: 20px;" ></div>
+        <div style="padding: 20px; margin-bottom: 20px;">
+          <input id="questionInput" type="text" placeholder="Want to customize the question? Paste the question here." style="font-size: 0.7em; width: 80%; padding: 20px;" />
+          <button id="saveQuestion" style="font-size: 1em; margin-top: 20px;">Save Question</button>
+        </div>
+      </div>
+
+      <!-- 2. Block related to start listening button and evaluate button -->
+      <div class="block control-block">
+        <button id="button">I am ready to speak</button>
+        <button id="evaluate" disabled>Evaluate</button>
+      </div>
+
+      <!-- 3. Block related to recognized text -->
+      <div class="block result-block">
+        <h2>Your Speech:</h2>
+        <div id="result"></div>
+      </div>
+
+      <!-- 4. Block related to comments -->
+      <div class="block evaluation-block">
+        <h2>Evaluation:</h2>
+        <div id="evaluation"></div>
+      </div>
+
+      <p id="message" hidden aria-hidden="true">
+        Your browser doesn't support Speech Recognition. Sorry.
+      </p>
+    </main>
+    <footer>
+      <p>Built by Zhoukatong Xia</p>
+    </footer>
+    <script>
+      window.addEventListener("DOMContentLoaded", () => {
+        const questions = [
+          "Question: Describe a book you have recently read.",
+          "Question: Talk about your favorite movie from your childhood.",
+          "Question: Describe a memorable event from your school days.",
+          "Question: Can you talk about a teacher who had a significant impact on you?",
+          "Question: Can you describe a natural scene which you think is beautiful?",
+          "Question: Do you like art? Discuss an artwork that you find interesting.",
+          "Question: Describe a piece of technology you find useful.",
+          "Question: Can you talk about a time when you had to speak in front of a group?",
+          "Question: Discuss a holiday you recently went on.",
+          "Question: Can you talk about your favorite type of music and why you like it?",
+          "Question: Describe your favorite season and explain why.",
+          "Question: Discuss a hobby you enjoy doing in your free time.",
+          "Question: Can you talk about a place where you like to relax?",
+          "Question: Can you describe a memorable meal you've had?",
+          "Question: Describe a significant historical event in your country.",
+          "Question: Discuss a childhood game or sport you used to play.",
+          "Question: Can you talk about a person who you admire, and why?",
+          "Question: Describe a city or town you have visited and found interesting.",
+          "Question: Discuss a gift you recently gave or received.",
+          "Question: Can you talk about an important decision you had to make recently?"
+        ]
+        const questionElement = document.getElementById("question");
+        const questionInput = document.getElementById("questionInput");
+        const saveQuestionButton = document.getElementById("saveQuestion");
+
+        function changeQuestion() {
+          const question = questions[Math.floor(Math.random() * questions.length)];
+          questionElement.textContent = question;
+        }
+
+        function saveQuestion() {
+          questionElement.textContent = questionInput.value;
+          questionInput.value = "";
+        }
+
+        changeQuestion();  // Display a random question when the page loads
+        saveQuestionButton.addEventListener("click", saveQuestion);
+
+        const button = document.getElementById("button");
+        const evaluateButton = document.getElementById("evaluate");
+        const result = document.getElementById("result");
+        const evaluation = document.getElementById("evaluation");
+        const main = document.getElementsByTagName("main")[0];
+        let listening = false;
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (typeof SpeechRecognition !== "undefined") {
+          const recognition = new SpeechRecognition();
+          
+          recognition.lang = 'en-US';
+
+          const stop = () => {
+            main.classList.remove("speaking");
+            recognition.stop();
+            button.textContent = "Start listening";
+            evaluateButton.disabled = false;
+          };
+
+          const start = () => {
+            main.classList.add("speaking");
+            recognition.start();
+            button.textContent = "Stop listening";
+            evaluateButton.disabled = true;
+          };
+
+          const onResult = event => {
+            result.innerHTML = "";
+            for (const res of event.results) {
+              const text = document.createTextNode(res[0].transcript);
+              const p = document.createElement("p");
+              if (res.isFinal) {
+                p.classList.add("final");
+              }
+              p.appendChild(text);
+              result.appendChild(p);
+            }
+          };
+
+          recognition.continuous = true;
+          recognition.interimResults = true;
+          recognition.addEventListener("result", onResult);
+
+          button.addEventListener("click", event => {
+            listening ? stop() : start();
+            listening = !listening;
+          });
+
+          evaluateButton.addEventListener("click", () => {
+            const data = {
+              question: questionElement.textContent,
+              answer: result.textContent
+            };
+
+            // Update button text and disable it
+            evaluateButton.textContent = "Evaluating...(20s)";
+            evaluateButton.disabled = true;
+
+            fetch('https://46cxn3ql70.execute-api.us-east-2.amazonaws.com/test/', {
+              method: 'POST',
+              body: JSON.stringify(data),
+              headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+              // Parse JSON string into JavaScript string and replace \n\n with <br>
+              const parsedData = JSON.parse(data.body.replace(/\\n\\n/g, "<br>").replace(/\\n/g, "<br>"));
+              evaluation.innerHTML = parsedData;
+
+              // Change button text back and re-enable it
+              evaluateButton.textContent = "Evaluate";
+              evaluateButton.disabled = false;
+            })
+            .catch(error => {
+              evaluation.innerText = 'Error: ' + error;
+
+              // Change button text back and re-enable it
+              evaluateButton.textContent = "Evaluate";
+              evaluateButton.disabled = false;
+            });
+          });
+
+        } else {
+          button.remove();
+          evaluateButton.remove();
+          const message = document.getElementById("message");
+          message.removeAttribute("hidden");
+          message.setAttribute("aria-hidden", "false");
+        }
+      });
+    </script>
+  </body>
+</html>
