@@ -2,7 +2,7 @@
 
 This tool is designed to assist individuals in practicing and enhancing their IELTS speaking skills. It prompts the user with a question, listens to their response, and provides suggestions for improvement.
 
-## Demo Link: (Chrome and Safari is prefered)
+## Demo Link: (Chrome or Safari is preferred)
 https://main.d2s4nllpawkp8y.amplifyapp.com/
 
 ## Features
